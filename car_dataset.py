@@ -30,6 +30,8 @@ class CarDataset(Dataset):
 
         # get entry from dataframe
         image_id, labels_string = self.dataframe.values[index]
+
+        # process entry from dataframe in order to extract annotations
         coords = str2coords(labels_string)
 
         # print(coords)
@@ -45,7 +47,6 @@ class CarDataset(Dataset):
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
         
-        # process entry from dataframe in order to extract annotations
         return 0
 
 
