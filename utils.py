@@ -107,6 +107,47 @@ def visualize(img, coords, camera_matrix):
     
     return img
 
+def rotate(x, angle):
+    x = x + angle
+    x = x - (x + np.pi) // (2 * np.pi) * 2 * np.pi
+    return x
+
+IMG_WIDTH = 1024
+IMG_HEIGHT = IMG_WIDTH // 16 * 5
+MODEL_SCALE = 8
+
+def _regr_preprocess(regr_dict, flip=False):
+    if flip:
+        for k in ['x', 'pitch', 'roll']:
+            regr_dict[k] = -regr_dict[k]
+    for name in ['x', 'y', 'z']:
+        regr_dict[name] = regr_dict[name] / 100
+    regr_dict['roll'] = rotate(regr_dict['roll'], np.pi)
+    regr_dict['pitch_sin'] = sin(regr_dict['pitch'])
+    regr_dict['pitch_cos'] = cos(regr_dict['pitch'])
+    regr_dict.pop('pitch')
+    regr_dict.pop('id')
+    return regr_dict
+
+def _regr_back(regr_dict):
+    for name in ['x', 'y', 'z']:
+        regr_dict[name] = regr_dict[name] * 100
+    regr_dict['roll'] = rotate(regr_dict['roll'], -np.pi)
+    
+    pitch_sin = regr_dict['pitch_sin'] / np.sqrt(regr_dict['pitch_sin']**2 + regr_dict['pitch_cos']**2)
+    pitch_cos = regr_dict['pitch_cos'] / np.sqrt(regr_dict['pitch_sin']**2 + regr_dict['pitch_cos']**2)
+    regr_dict['pitch'] = np.arccos(pitch_cos) * np.sign(pitch_sin)
+    return regr_dict
+
+def preprocess_image(img, flip=False):
+    img = img[img.shape[0] // 2:]
+    bg = np.ones_like(img) * img.mean(1, keepdims=True).astype(img.dtype)
+    bg = bg[:, :img.shape[1] // 6]
+    img = np.concatenate([bg, img, bg], 1)
+    img = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT))
+    if flip:
+        img = img[:,::-1]
+    return (img / 255).astype('float32')
 
 # Work in Progress!!!
 def get_mask_and_regr(img, labels, camera_matrix, flip=False):

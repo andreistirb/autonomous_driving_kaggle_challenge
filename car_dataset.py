@@ -61,12 +61,9 @@ class CarDataset(Dataset):
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
 
-        # we need to return x, y, z, yaw, pitch, roll values
+        # we need to return x, y, z, yaw, pitch, roll values and regression map
         
         return 0
 
-
     def __len__(self):
         return len(self.dataframe)
-
-    
