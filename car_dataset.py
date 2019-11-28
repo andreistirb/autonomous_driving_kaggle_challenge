@@ -9,7 +9,7 @@ import pathlib
 
 import torch
 from torch.utils.data import Dataset
-from utils import str2coords, get_img_coords, visualize
+from utils import str2coords, get_img_coords, visualize, get_mask_and_regr, preprocess_image
 
 # Car dataset class for pytorch models
 # instantiate it with a dataframe and a root_path for images
@@ -27,43 +27,61 @@ class CarDataset(Dataset):
 
         self.training = training
         self.transform = transform
-        
+
+
+    # TO-DO: 
+    #     - put all the preprocessing on image and labels in transform classes so we can 
+    # better control how we create the heatmaps
     def __getitem__(self, index):
 
         # get entry from dataframe
         image_id, labels_string = self.dataframe.values[index]
 
         # process entry from dataframe in order to extract annotations
-        coords = str2coords(labels_string)
+        # coords = str2coords(labels_string)
 
-        print(coords)
-        print(image_id) 
+        # print(coords)
+        # print(image_id) 
 
         # get image coordinates
-        x_coords, y_coords = get_img_coords(labels_string, self.camera_matrix)
+        # x_coords, y_coords = get_img_coords(labels_string, self.camera_matrix)
         # print(x_coords)
         # print(y_coords)
 
         # open image
-        img = cv2.imread(self.imgs_path + image_id + ".jpg")
+        img0 = cv2.imread(self.imgs_path + image_id + ".jpg")
+        img = preprocess_image(img0)
+
+        # ignore this in the future
+        img = np.rollaxis(img, 2, 0)
+
+        mask, regr = get_mask_and_regr(img0, labels_string, self.camera_matrix)
+
+        # ignore this in the future
+        regr = np.rollaxis(regr, 2, 0)
+        # print(mask.shape)
+        # print(regr.shape)
 
         # display image - just for testing
         # w, h, _ = img.shape
 
         # for x, y in zip(x_coords, y_coords):
-        #    cv2.circle(img, (int(x), int(y)), 10, (0, 0, 255), -1)
+        #    cv2.circle(img0, (int(x), int(y)), 10, (0, 0, 255), -1)
 
-        # img = visualize(img, coords, self.camera_matrix)
-
-        # img_resize = cv2.resize(img, (int(0.2 * h), int(0.2 * w)))
-        # cv2.imshow("asdas", img_resize)
+        #img0 = visualize(img0, coords, self.camera_matrix)
+        #img0 = cv2.resize(img0, (int(0.2 * h), int(0.2 * w)))
+    
+        # cv2.imshow("asdas", img)
         # cv2.imwrite("de_test.jpg", img)
+        # cv2.imshow("mask", mask)
+        # cv2.imshow("regr", regr[:,:,0])
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
 
-        # we need to return x, y, z, yaw, pitch, roll values and regression map
+        # we need to return x, y, z, yaw, pitch, roll values/heatmap and regression heatmap
         
-        return 0
+        
+        return img, mask, regr
 
     def __len__(self):
         return len(self.dataframe)

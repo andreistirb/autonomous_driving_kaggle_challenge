@@ -18,7 +18,7 @@ def str2coords(s, names=['id', 'yaw', 'pitch', 'roll', 'x', 'y', 'z']):
             coords[-1]['id'] = int(coords[-1]['id'])
     return coords
 
-# convert from camera coordinates into image coordinates
+# convert from camera coordinates to image coordinates
 def get_img_coords(s, camera_matrix):
     '''
     Input is a PredictionString (e.g. from train dataframe)
@@ -150,6 +150,11 @@ def preprocess_image(img, flip=False):
     return (img / 255).astype('float32')
 
 # Work in Progress!!!
+# TO-DO: 
+#    - understand why the shape of the mask/regr_mask is so wide (aspect ration)
+#    - can we have another aspect ratio for the mask?
+#    - I suggest using sin & cos for all angles, not just pitch so we'll have 9 channels in regr heatmap
+#    - create heatmap with Gaussian kernel for detection not just a mask
 def get_mask_and_regr(img, labels, camera_matrix, flip=False):
     mask = np.zeros([IMG_HEIGHT // MODEL_SCALE, IMG_WIDTH // MODEL_SCALE], dtype='float32')
     regr_names = ['x', 'y', 'z', 'yaw', 'pitch', 'roll']
