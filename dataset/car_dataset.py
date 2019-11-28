@@ -9,7 +9,7 @@ import pathlib
 
 import torch
 from torch.utils.data import Dataset
-from utils import str2coords, get_img_coords, visualize, get_mask_and_regr, preprocess_image
+from utils.utils import str2coords, get_img_coords, visualize, get_mask_and_regr, preprocess_image
 
 # Car dataset class for pytorch models
 # instantiate it with a dataframe and a root_path for images
