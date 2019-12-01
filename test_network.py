@@ -118,7 +118,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # print(device)
 
-    n_epochs = 100
+    n_epochs = 300
 
     model = MyUNet(8).to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
@@ -153,3 +153,5 @@ if __name__ == "__main__":
     test['PredictionString'] = predictions
     test.to_csv('predictions.csv', index=False)
     print(test.head())'''
+
+    # check mAP
