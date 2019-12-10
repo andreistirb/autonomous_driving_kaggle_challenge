@@ -197,11 +197,11 @@ def extract_coords(prediction, flipped=False):
         regr_dict = dict(zip(col_names, regr_output[:, r, c]))
         coords.append(_regr_back(regr_dict))
         coords[-1]['confidence'] = 1 / (1 + np.exp(-logits[r, c]))
-        coords[-1]['x'], coords[-1]['y'], coords[-1]['z'] = \
-                optimize_xy(r, c,
-                            coords[-1]['x'],
-                            coords[-1]['y'],
-                            coords[-1]['z'], flipped)
+        #coords[-1]['x'], coords[-1]['y'], coords[-1]['z'] = \
+        #        optimize_xy(r, c,
+        #                    coords[-1]['x'],
+        #                    coords[-1]['y'],
+        #                    coords[-1]['z'], flipped)
     coords = clear_duplicates(coords)
     return coords
 

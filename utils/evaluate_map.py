@@ -5,7 +5,7 @@ from sklearn.metrics import average_precision_score
 from multiprocessing import Pool
 import numpy as np
 
-from utils import str2coords
+from utils.utils import str2coords
 
 def expand_df(df, PredictionStringCols):
     df = df.dropna().copy()
@@ -59,10 +59,6 @@ def RotationDistance(p, g):
         W = 360 - W
     return W
 
-
-thres_tr_list = [0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]
-thres_ro_list = [50, 45, 40, 35, 30, 25, 20, 15, 10, 5]
-
 def check_match(thre_tr_dist, thre_ro_dist, gt_df, prediction_df):
     keep_gt=False
 
@@ -75,7 +71,7 @@ def check_match(thre_tr_dist, thre_ro_dist, gt_df, prediction_df):
     scores = []
     MAX_VAL = 10**10
     for img_id in prediction_dict:
-        for pcar in sorted(prediction_dict[img_id], key=lambda x: -x['carid_or_score']):
+        for pcar in sorted(prediction_dict[img_id], key=lambda x: -x['confidence']):
             # find nearest GT
             min_tr_dist = MAX_VAL
             min_idx = -1
@@ -93,7 +89,7 @@ def check_match(thre_tr_dist, thre_ro_dist, gt_df, prediction_df):
                 result_flg.append(1)
             else:
                 result_flg.append(0)
-            scores.append(pcar['carid_or_score'])
+            scores.append(pcar['confidence'])
     
     return result_flg, scores
 
@@ -111,7 +107,6 @@ def compute_map(gt_df, prediction_df):
     max_workers = 10
     n_gt = len(gt_df)
     ap_list = []
-    p = Pool(processes=max_workers)
     for tr, ro in zip(thres_tr_list, thres_ro_list):
         result_flg, scores = check_match(tr, ro, gt_df, prediction_df)
         if np.sum(result_flg) > 0:
@@ -122,5 +117,5 @@ def compute_map(gt_df, prediction_df):
             ap = 0
         ap_list.append(ap)
     map = np.mean(ap_list)
-    print('map:', map)
+    #print('map:', map)
     return map

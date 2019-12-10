@@ -12,6 +12,7 @@ from torch.optim import lr_scheduler
 from dataset.car_dataset import CarDataset
 from nn.network import MyUNet
 from utils.utils import coords2str, extract_coords
+from utils.evaluate_map import compute_map
 
 from efficientnet_pytorch import EfficientNet
 
@@ -92,24 +93,30 @@ if __name__ == "__main__":
 
     ROOT_PATH = "/media/andreis/storage/datasets/pku-autonomous-driving/"
     df = pd.read_csv(ROOT_PATH + "train.csv")
-    df_test = pd.read_csv(ROOT_PATH + "sample_submission.csv")
+    df_prediction = pd.read_csv(ROOT_PATH + "sample_submission.csv")
 
     train_images_dir = ROOT_PATH + "train_images/"
     test_images_dir = ROOT_PATH + "test_images/"
 
-    df_train, df_val = train_test_split(df, test_size=0.01, random_state=72)
+    df_train, df_valtest = train_test_split(df, test_size=0.05, random_state=72)
+    df_val, df_test = train_test_split(df_valtest, test_size=0.2, random_state=72)
 
     # create dataset objects
     train_dataset = CarDataset(df_train, train_images_dir, camera_matrix)
     val_dataset = CarDataset(df_val, train_images_dir, camera_matrix)
-    test_dataset = CarDataset(df_test, test_images_dir, camera_matrix)
+    test_dataset = CarDataset(df_test, train_images_dir, camera_matrix)
 
-    img, mask, regr = train_dataset[0]
+    prediction_dataset = CarDataset(df_prediction, test_images_dir, camera_matrix)
+
+    #img, mask, regr = train_dataset[0]
     # print(img.shape)
 
     BATCH_SIZE = 4
-    train_loader = DataLoader(dataset=val_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
-    dev_loader = DataLoader(dataset=val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
+    val_loader = DataLoader(dataset=val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
+    test_loader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
+
+
 
     #for img, mask, regr in train_loader:
     #    print(img.shape)
@@ -118,7 +125,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # print(device)
 
-    n_epochs = 300
+    n_epochs = 10
 
     model = MyUNet(8).to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
@@ -130,15 +137,31 @@ if __name__ == "__main__":
         torch.cuda.empty_cache()
         gc.collect()
         train_model(model, epoch, train_loader, history)
-        evaluate_model(model, epoch, dev_loader, history)
+
+        # insert mAP evaluation here
+        predictions = []
+        model.eval()
+        for img, _, _ in tqdm(test_loader):
+            with torch.no_grad():
+                output = model(img.to(device))
+            output = output.data.cpu().numpy()
+            for out in output:
+                coords = extract_coords(out)
+                s = coords2str(coords)
+                predictions.append(s)
+
+        test = df_test.copy()
+        test['PredictionString'] = predictions
+        map_score = compute_map(df_test, test)
+        print("mAP score: {}".format(map_score))
+
+        #evaluate_model(model, epoch, dev_loader, history)
 
     torch.save(model.state_dict(), './model.pth')
 
     # prepare a submission
-    '''
-    predictions = []
-
-    test_loader = DataLoader(dataset=test_dataset, batch_size=4, shuffle=False, num_workers=4)
+    
+    '''predictions = []
     model.eval()
     for img, _, _ in tqdm(test_loader):
         with torch.no_grad():

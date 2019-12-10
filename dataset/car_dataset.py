@@ -36,6 +36,7 @@ class CarDataset(Dataset):
 
         # get entry from dataframe
         image_id, labels_string = self.dataframe.values[index]
+        #print("In dataset {}".format(labels_string))
 
         # process entry from dataframe in order to extract annotations
         # coords = str2coords(labels_string)
