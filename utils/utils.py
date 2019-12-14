@@ -152,7 +152,7 @@ def _regr_back(regr_dict):
     roll_sin = regr_dict['roll_sin'] / np.sqrt(regr_dict['roll_sin']**2 + regr_dict['roll_cos']**2)
     roll_cos = regr_dict['roll_cos'] / np.sqrt(regr_dict['roll_sin']**2 + regr_dict['roll_cos']**2)
 
-    regr_dict['roll'] = np.arccos(roll_cos) * np.sign(roll_rin)
+    regr_dict['roll'] = np.arccos(roll_cos) * np.sign(roll_sin)
     regr_dict['roll'] = rotate(regr_dict['roll'], -np.pi)
 
     regr_dict['pitch'] = np.arccos(pitch_cos) * np.sign(pitch_sin)
