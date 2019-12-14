@@ -53,13 +53,14 @@ class CarDataset(Dataset):
         img0 = cv2.imread(self.imgs_path + image_id + ".jpg")
         img = preprocess_image(img0)
 
-        # ignore this in the future
+        # do we need to convert from HWC to CHW because of opencv??? MAJOR ISSUE!!!
         img = np.rollaxis(img, 2, 0)
 
         mask, regr = get_mask_and_regr(img0, labels_string, self.camera_matrix)
 
-        # ignore this in the future
+        # convert from HWC to CHW
         regr = np.rollaxis(regr, 2, 0)
+
         # print(mask.shape)
         # print(regr.shape)
 

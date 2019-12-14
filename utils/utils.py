@@ -128,18 +128,36 @@ def _regr_preprocess(regr_dict, flip=False):
     regr_dict['roll'] = rotate(regr_dict['roll'], np.pi)
     regr_dict['pitch_sin'] = sin(regr_dict['pitch'])
     regr_dict['pitch_cos'] = cos(regr_dict['pitch'])
+    regr_dict['yaw_sin'] = sin(regr_dict['yaw'])
+    regr_dict['yaw_cos'] = cos(regr_dict['yaw'])
+    regr_dict['roll_sin'] = sin(regr_dict['roll'])
+    regr_dict['roll_cos'] = cos(regr_dict['roll'])
     regr_dict.pop('pitch')
+    regr_dict.pop('yaw')
+    regr_dict.pop('roll')
     regr_dict.pop('id')
     return regr_dict
 
 def _regr_back(regr_dict):
     for name in ['x', 'y', 'z']:
         regr_dict[name] = regr_dict[name] * 100
-    regr_dict['roll'] = rotate(regr_dict['roll'], -np.pi)
+    #regr_dict['roll'] = rotate(regr_dict['roll'], -np.pi)
     
     pitch_sin = regr_dict['pitch_sin'] / np.sqrt(regr_dict['pitch_sin']**2 + regr_dict['pitch_cos']**2)
     pitch_cos = regr_dict['pitch_cos'] / np.sqrt(regr_dict['pitch_sin']**2 + regr_dict['pitch_cos']**2)
+
+    yaw_sin = regr_dict['yaw_sin'] / np.sqrt(regr_dict['yaw_sin']**2 + regr_dict['yaw_cos']**2)
+    yaw_cos = regr_dict['yaw_cos'] / np.sqrt(regr_dict['yaw_sin']**2 + regr_dict['yaw_cos']**2)
+
+    roll_sin = regr_dict['roll_sin'] / np.sqrt(regr_dict['roll_sin']**2 + regr_dict['roll_cos']**2)
+    roll_cos = regr_dict['roll_cos'] / np.sqrt(regr_dict['roll_sin']**2 + regr_dict['roll_cos']**2)
+
+    regr_dict['roll'] = np.arccos(roll_cos) * np.sign(roll_rin)
+    regr_dict['roll'] = rotate(regr_dict['roll'], -np.pi)
+
     regr_dict['pitch'] = np.arccos(pitch_cos) * np.sign(pitch_sin)
+
+    regr_dict['yaw'] = np.arccos(yaw_cos) * np.sign(yaw_sin)
     return regr_dict
 
 def preprocess_image(img, flip=False):
@@ -161,7 +179,7 @@ def preprocess_image(img, flip=False):
 def get_mask_and_regr(img, labels, camera_matrix, flip=False):
     mask = np.zeros([IMG_HEIGHT // MODEL_SCALE, IMG_WIDTH // MODEL_SCALE], dtype='float32')
     regr_names = ['x', 'y', 'z', 'yaw', 'pitch', 'roll']
-    regr = np.zeros([IMG_HEIGHT // MODEL_SCALE, IMG_WIDTH // MODEL_SCALE, 7], dtype='float32')
+    regr = np.zeros([IMG_HEIGHT // MODEL_SCALE, IMG_WIDTH // MODEL_SCALE, 9], dtype='float32')
     coords = str2coords(labels)
     xs, ys = get_img_coords(labels, camera_matrix)
     for x, y, regr_dict in zip(xs, ys, coords):
@@ -191,7 +209,8 @@ def extract_coords(prediction, flipped=False):
     logits = prediction[0]
     regr_output = prediction[1:]
     points = np.argwhere(logits > 0)
-    col_names = sorted(['x', 'y', 'z', 'yaw', 'pitch_sin', 'pitch_cos', 'roll'])
+    col_names = sorted(['x', 'y', 'z', 'pitch_sin', 'pitch_cos',
+                    'yaw_sin', 'yaw_cos', 'roll_sin', 'roll_cos'])
     coords = []
     for r, c in points:
         regr_dict = dict(zip(col_names, regr_output[:, r, c]))

@@ -37,9 +37,22 @@ def criterion(prediction, mask, regr, size_average=True):
     pred_regr = prediction[:, 1:]
     regr_loss = (torch.abs(pred_regr - regr).sum(1) * mask).sum(1).sum(1) / mask.sum(1).sum(1)
     regr_loss = regr_loss.mean(0)
+
+    # sin^2 + cos^2 loss
+
+    ones = torch.ones(prediction[:,1].shape).to(torch.device("cuda"))
+    
+    pitch_trig_loss = (torch.abs(ones -  (prediction[:,1] ** 2 + prediction[:,2] ** 2)) * mask).sum(1).sum(1)
+    pitch_trig_loss = pitch_trig_loss.mean(0)
+
+    yaw_trig_loss = (torch.abs(ones - (prediction[:,7] ** 2 + prediction[:,8] ** 2)) * mask).sum(1).sum(1)
+    yaw_trig_loss = yaw_trig_loss.mean(0)
+
+    roll_trig_loss = (torch.abs(ones - (prediction[:,3] ** 2 + prediction[:,4] ** 2)) * mask).sum(1).sum(1)
+    roll_trig_loss = roll_trig_loss.mean(0)
     
     # Sum
-    loss = mask_loss + regr_loss
+    loss = mask_loss + regr_loss + pitch_trig_loss + yaw_trig_loss + roll_trig_loss
     if not size_average:
         loss *= prediction.shape[0]
     return loss
@@ -116,6 +129,7 @@ if __name__ == "__main__":
     val_loader = DataLoader(dataset=val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
     test_loader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
+    prediction_loader = DataLoader(dataset=prediction_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
 
     #for img, mask, regr in train_loader:
@@ -125,9 +139,9 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # print(device)
 
-    n_epochs = 10
+    n_epochs = 35
 
-    model = MyUNet(8).to(device)
+    model = MyUNet(10).to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=max(n_epochs, 10) * len(train_loader) // 3, gamma=0.1)
 
@@ -159,11 +173,11 @@ if __name__ == "__main__":
 
     torch.save(model.state_dict(), './model.pth')
 
-    # prepare a submission
+    # prepare a submission with the latest model
     
-    '''predictions = []
+    predictions = []
     model.eval()
-    for img, _, _ in tqdm(test_loader):
+    for img, _, _ in tqdm(prediction_loader):
         with torch.no_grad():
             output = model(img.to(device))
         output = output.data.cpu().numpy()
@@ -172,9 +186,7 @@ if __name__ == "__main__":
             s = coords2str(coords)
             predictions.append(s)
 
-    test = pd.read_csv(ROOT_PATH + 'sample_submission.csv')
-    test['PredictionString'] = predictions
-    test.to_csv('predictions.csv', index=False)
-    print(test.head())'''
-
-    # check mAP
+    prediction_df = pd.read_csv(ROOT_PATH + 'sample_submission.csv')
+    prediction_df['PredictionString'] = predictions
+    prediction_df.to_csv('predictions.csv', index=False)
+    print(prediction_df.head())
