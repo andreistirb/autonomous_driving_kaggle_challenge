@@ -29,7 +29,7 @@ MODEL_SCALE = 8
 def criterion(prediction, mask, regr, size_average=True):
     # Binary mask loss
     pred_mask = torch.sigmoid(prediction[:, 0])
-#     mask_loss = mask * (1 - pred_mask)**2 * torch.log(pred_mask + 1e-12) + (1 - mask) * pred_mask**2 * torch.log(1 - pred_mask + 1e-12)
+    # mask_loss = mask * (1 - pred_mask)**2 * torch.log(pred_mask + 1e-12) + (1 - mask) * pred_mask**2 * torch.log(1 - pred_mask + 1e-12)
     mask_loss = mask * torch.log(pred_mask + 1e-12) + (1 - mask) * torch.log(1 - pred_mask + 1e-12)
     mask_loss = -mask_loss.mean(0).sum()
     
@@ -38,8 +38,12 @@ def criterion(prediction, mask, regr, size_average=True):
     regr_loss = (torch.abs(pred_regr - regr).sum(1) * mask).sum(1).sum(1) / mask.sum(1).sum(1)
     regr_loss = regr_loss.mean(0)
 
-    # sin^2 + cos^2 loss
+    # Regression L2 loss
+    pred_regr = prediction[:, 1:]
+    regr_loss_l2 = (((pred_regr - regr) ** 2).sum(1) * mask).sum(1).sum(1) / mask.sum(1).sum(1)
+    regr_loss_l2 = regr_loss_l2.mean(0)
 
+    # sin^2 + cos^2 loss
     ones = torch.ones(prediction[:,1].shape).to(torch.device("cuda"))
     
     pitch_trig_loss = (torch.abs(ones -  (prediction[:,1] ** 2 + prediction[:,2] ** 2)) * mask).sum(1).sum(1)
@@ -52,7 +56,7 @@ def criterion(prediction, mask, regr, size_average=True):
     roll_trig_loss = roll_trig_loss.mean(0)
     
     # Sum
-    loss = mask_loss + regr_loss + pitch_trig_loss + yaw_trig_loss + roll_trig_loss
+    loss = 0.4 * mask_loss + 0.4 * regr_loss_l2 + 0.2 * (pitch_trig_loss + yaw_trig_loss + roll_trig_loss)
     if not size_average:
         loss *= prediction.shape[0]
     return loss
