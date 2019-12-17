@@ -83,7 +83,7 @@ def visualize(img, coords, camera_matrix):
     y_l = 0.80
     z_l = 2.31
     
-    img = img.copy()
+    #img = img.copy()
     for point in coords:
         # Get values
         x, y, z = point['x'], point['y'], point['z']
@@ -104,9 +104,13 @@ def visualize(img, coords, camera_matrix):
         img_cor_points[:, 0] /= img_cor_points[:, 2]
         img_cor_points[:, 1] /= img_cor_points[:, 2]
         img_cor_points = img_cor_points.astype(int)
+        #print("Image COORDINATES {}".format(img_cor_points))
         # Drawing
         img = draw_line(img, img_cor_points)
         img = draw_points(img, img_cor_points[-1:])
+
+    #cv2.imshow("Predictions", img)
+    #cv2.waitKey()
     
     return img
 

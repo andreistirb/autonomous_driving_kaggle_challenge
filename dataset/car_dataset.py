@@ -57,9 +57,12 @@ class CarDataset(Dataset):
         img = np.rollaxis(img, 2, 0)
 
         mask, regr = get_mask_and_regr(img0, labels_string, self.camera_matrix)
+        #print("Regression shape {}".format(regr.shape))
 
         # convert from HWC to CHW
         regr = np.rollaxis(regr, 2, 0)
+
+        #print("Regression shape after rollaxis {}".format(regr.shape))
 
         # print(mask.shape)
         # print(regr.shape)
@@ -84,6 +87,7 @@ class CarDataset(Dataset):
         
         
         return img, mask, regr
+        #return img, mask, regr, img0
 
     def __len__(self):
         return len(self.dataframe)

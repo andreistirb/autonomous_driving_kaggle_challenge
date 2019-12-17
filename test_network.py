@@ -25,13 +25,19 @@ device = torch.device("cuda")
 IMG_WIDTH = 1024
 IMG_HEIGHT = IMG_WIDTH // 16 * 5
 MODEL_SCALE = 8
+max_map = 0
 
 def criterion(prediction, mask, regr, size_average=True):
     # Binary mask loss
     pred_mask = torch.sigmoid(prediction[:, 0])
     # mask_loss = mask * (1 - pred_mask)**2 * torch.log(pred_mask + 1e-12) + (1 - mask) * pred_mask**2 * torch.log(1 - pred_mask + 1e-12)
-    mask_loss = mask * torch.log(pred_mask + 1e-12) + (1 - mask) * torch.log(1 - pred_mask + 1e-12)
-    mask_loss = -mask_loss.mean(0).sum()
+    #mask_loss = mask * torch.log(pred_mask + 1e-12) + (1 - mask) * torch.log(1 - pred_mask + 1e-12)
+    mask_loss_first = mask * ((1 - pred_mask) ** 2) * torch.log(pred_mask)
+    mask_loss_second = (1 - mask) * ((pred_mask) ** 2) * torch.log(1 - pred_mask)
+    mask_loss = mask_loss_first + mask_loss_second
+    mask_loss = -1 * mask_loss.sum() / mask.sum()
+    #print(mask_loss.shape)
+    #mask_loss = -mask_loss.mean(0).sum()
     
     # Regression L1 loss
     pred_regr = prediction[:, 1:]
@@ -56,7 +62,8 @@ def criterion(prediction, mask, regr, size_average=True):
     roll_trig_loss = roll_trig_loss.mean(0)
     
     # Sum
-    loss = 0.4 * mask_loss + 0.4 * regr_loss_l2 + 0.2 * (pitch_trig_loss + yaw_trig_loss + roll_trig_loss)
+    #loss = 0.4 * mask_loss + 0.4 * regr_loss_l2 + 0.2 * (pitch_trig_loss + yaw_trig_loss + roll_trig_loss)
+    loss = mask_loss + regr_loss_l2
     if not size_average:
         loss *= prediction.shape[0]
     return loss
@@ -143,7 +150,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # print(device)
 
-    n_epochs = 35
+    n_epochs = 14
 
     model = MyUNet(10).to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
@@ -155,6 +162,7 @@ if __name__ == "__main__":
         torch.cuda.empty_cache()
         gc.collect()
         train_model(model, epoch, train_loader, history)
+        evaluate_model(model, epoch, val_loader, history)
 
         # insert mAP evaluation here
         predictions = []
@@ -171,14 +179,20 @@ if __name__ == "__main__":
         test = df_test.copy()
         test['PredictionString'] = predictions
         map_score = compute_map(df_test, test)
-        print("mAP score: {}".format(map_score))
+        print("\nmAP score: {}\n".format(map_score))
+
+        if map_score > max_map:
+            torch.save(model.state_dict(), './model.pth')
+            max_map = map_score
+            print("Saving a better model...")
 
         #evaluate_model(model, epoch, dev_loader, history)
 
-    torch.save(model.state_dict(), './model.pth')
-
-    # prepare a submission with the latest model
     
+
+    # prepare a submission with the best model
+    
+    model.load_state_dict(torch.load("model.pth"))
     predictions = []
     model.eval()
     for img, _, _ in tqdm(prediction_loader):
